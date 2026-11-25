@@ -1,0 +1,35 @@
+# Rust & Cargo
+/target/
+**/*.rs.bk
+
+# Frontend & Tauri
+node_modules/
+dist/
+.vite/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Biner sidecar & berkas sementara simulasi FEA
+binaries/*.exe
+binaries/gmsh*
+binaries/ccx*
+!binaries/.gitkeep
+*.frd
+*.dat
+*.cvg
+*.sta
+*.12d
+*.msh
+
+# Rahasia & konfigurasi lingkungan
+.env
+.env.*
+!.env.example
+
+# Berkas sistem, editor, & temporer
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.superpowers/
+*.log

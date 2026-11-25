@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CalX — FEA & LOAD TESTING</title>
+<style>
+  :root {
+    --bg: #0B0D10; --glass: rgba(22, 26, 32, 0.72); --glass-2: rgba(31, 37, 46, 0.68);
+    --line: rgba(255, 255, 255, 0.08); --line-hi: rgba(255, 255, 255, 0.16);
+    --spec: rgba(255, 255, 255, 0.12); --text: #F2F4F7; --muted: #8B949E;
+    --accent: #F04E23; --accent-hi: #FF6238; --accent-glow: rgba(240, 78, 35, 0.28);
+    --ok: #10B981; --ok-bg: rgba(16, 185, 129, 0.12); --ok-ln: rgba(16, 185, 129, 0.36);
+    --bad: #EF4444; --bad-bg: rgba(239, 68, 68, 0.13); --bad-ln: rgba(239, 68, 68, 0.42);
+    --grid: rgba(255, 255, 255, 0.055); --edge: rgba(10, 12, 16, 0.45);
+    --rad-1: rgba(148, 163, 184, 0.11); --rad-2: rgba(240, 78, 35, 0.06);
+    --elev: 0 18px 42px rgba(0, 0, 0, 0.42);
+  }
+  [data-theme="light"] {
+    --bg: #F2F4F7; --glass: rgba(255, 255, 255, 0.78); --glass-2: rgba(255, 255, 255, 0.92);
+    --line: rgba(15, 23, 42, 0.09); --line-hi: rgba(15, 23, 42, 0.18);
+    --spec: rgba(255, 255, 255, 0.95); --text: #111418; --muted: #5C6672;
+    --accent: #E6481E; --accent-hi: #F25A30; --accent-glow: rgba(230, 72, 30, 0.22);
+    --ok: #059669; --ok-bg: rgba(5, 150, 105, 0.10); --ok-ln: rgba(5, 150, 105, 0.32);
+    --bad: #DC2626; --bad-bg: rgba(220, 38, 38, 0.10); --bad-ln: rgba(220, 38, 38, 0.36);
+    --grid: rgba(15, 23, 42, 0.065); --edge: rgba(15, 23, 42, 0.28);
+    --rad-1: rgba(148, 163, 184, 0.18); --rad-2: rgba(230, 72, 30, 0.05);
+    --elev: 0 14px 36px rgba(15, 23, 42, 0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased; transition: background .25s ease, color .25s ease;
+    background-image:
+      radial-gradient(62% 58% at 38% 46%, var(--rad-1), transparent 72%),
+      radial-gradient(40% 38% at 68% 78%, var(--rad-2), transparent 74%);
+  }
+  .lg {
+    background: var(--glass);
+    backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%);
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 var(--spec), var(--elev);
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  /* Bilah Atas 54px */
+  header {
+    height: 54px; flex: 0 0 54px; padding: 0 20px; display: flex; align-items: center;
+    justify-content: space-between; border-bottom: 1px solid var(--line);
+    background: var(--glass); backdrop-filter: blur(24px) saturate(170%);
+    -webkit-backdrop-filter: blur(24px) saturate(170%);
+    box-shadow: inset 0 1px 0 var(--spec); z-index: 20;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-name { font-size: 17px; font-weight: 700; letter-spacing: -0.03em; }
+  .brand-name span { color: var(--accent); }
+  .v-sep { width: 1px; height: 18px; background: var(--line-hi); margin: 0 4px; }
+  .brand-sub { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: var(--muted); }
+  .bar-r { display: flex; align-items: center; gap: 8px; }
+  .chip, .tbtn {
+    height: 32px; padding: 0 12px; border-radius: 8px; font-size: 12px; font-weight: 500;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    color: var(--text); background: var(--glass-2); border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 var(--spec); white-space: nowrap; transition: border-color .18s, background .18s;
+  }
+  .chip { border-radius: 999px; color: var(--muted); }
+  .chip b { color: var(--text); font-weight: 600; }
+  .tbtn { cursor: pointer; }
+  .tbtn:hover { border-color: var(--line-hi); }
+  .s-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  /* Ruang Kerja Studio Penuh Layar (75% / 25%) */
+  main { flex: 1; min-height: 0; display: flex; position: relative; }
+  .studio {
+    flex: 1; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .iso-grid {
+    position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+    mask-image: radial-gradient(ellipse 68% 66% at 50% 50%, #000 32%, transparent 86%);
+    -webkit-mask-image: radial-gradient(ellipse 68% 66% at 50% 50%, #000 32%, transparent 86%);
+  }
+  /* Pengalih Tampilan Pil Mengambang */
+  .seg {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    padding: 4px; border-radius: 999px; display: flex; gap: 4px; z-index: 12;
+  }
+  .seg button {
+    height: 32px; padding: 0 14px; border: none; border-radius: 999px; background: transparent;
+    color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    transition: all .2s ease; white-space: nowrap;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on {
+    color: #FFF; background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 4px 14px var(--accent-glow);
+  }
+  /* Bilah Skala Warna Vertikal */
+  .scale {
+    position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+    padding: 12px 10px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 10;
+  }
+  .scale-head { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); text-align: center; }
+  .scale-body { display: flex; align-items: stretch; gap: 8px; }
+  .scale-bar {
+    width: 10px; height: 216px; border-radius: 99px; border: 1px solid var(--line);
+    background: linear-gradient(180deg, #DC2626 0%, #F04E23 18%, #F59E0B 40%, #10B981 62%, #0EA5E9 82%, #1D4ED8 100%);
+  }
+  .scale-ticks {
+    height: 216px; display: flex; flex-direction: column; justify-content: space-between;
+    font-size: 10.5px; font-weight: 600; color: var(--muted); line-height: 1;
+  }
+  /* Panggung Model 3D Isometrik */
+  .stage {
+    position: relative; width: min(82%, 680px); aspect-ratio: 640 / 480;
+    transition: filter .2s ease, transform .2s ease;
+  }
+  .stage.pulse { filter: brightness(1.18); transform: scale(1.008); }
+  .stage svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .fea-g { opacity: 0; transition: opacity .3s ease; }
+  .studio.fea .fea-g { opacity: 1; }
+  .pin-cap {
+    position: absolute; left: 68.5%; top: 20.5%; padding: 7px 12px; border-radius: 9px;
+    font-size: 11.5px; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 7px;
+    border-color: var(--line-hi); pointer-events: none;
+  }
+  .pin-cap i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); display: block; }
+  /* Penanda Bawah Kanvas */
+  .triad { position: absolute; left: 20px; bottom: 16px; display: flex; align-items: center; gap: 10px; opacity: 0.85; }
+  .units {
+    position: absolute; right: 20px; bottom: 16px; padding: 6px 12px; border-radius: 8px;
+    font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.03em;
+  }
+  /* Panel Samping Kanan (25%, 320–360px) */
+  .dock { width: clamp(320px, 25vw, 360px); flex-shrink: 0; padding: 14px 14px 14px 0; display: flex; }
+  aside {
+    flex: 1; border-radius: 16px; padding: 20px; display: flex; flex-direction: column;
+    justify-content: space-between; gap: 16px; min-height: 0; overflow-y: auto;
+  }
+  .blk { display: flex; flex-direction: column; gap: 10px; }
+  .lbl {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); display: flex; justify-content: space-between; align-items: center;
+  }
+  .mat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .mat-btn {
+    height: 38px; padding: 0 6px; border-radius: 9px; font-size: 12px; font-weight: 600;
+    color: var(--muted); background: var(--glass-2); border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 var(--spec); cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: all .18s ease;
+  }
+  .mat-btn:hover { color: var(--text); border-color: var(--line-hi); }
+  .mat-btn.on {
+    color: var(--text); border-color: var(--accent);
+    background: linear-gradient(180deg, rgba(240,78,35,0.16), rgba(240,78,35,0.05));
+  }
+  .load-ctrl { display: flex; align-items: center; gap: 8px; }
+  .num-box {
+    flex: 1; height: 40px; border-radius: 9px; background: var(--glass-2); border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 var(--spec); display: flex; align-items: center; overflow: hidden;
+  }
+  .num-box:focus-within { border-color: var(--accent); }
+  .step {
+    width: 34px; height: 100%; border: none; background: transparent; color: var(--muted);
+    font-size: 15px; cursor: pointer; display: grid; place-items: center; transition: color .15s, background .15s;
+  }
+  .step:hover { color: var(--text); background: var(--line); }
+  .num-box input {
+    width: 100%; min-width: 0; border: none; outline: none; background: transparent;
+    color: var(--text); text-align: center; font-size: 15px; font-weight: 700;
+  }
+  .num-box input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .kg-tag { font-size: 11.5px; font-weight: 600; color: var(--muted); padding-right: 10px; }
+  .n-pill {
+    height: 40px; min-width: 88px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--line);
+    background: var(--glass); font-size: 12.5px; font-weight: 600; color: var(--muted);
+    display: flex; align-items: center; justify-content: center; white-space: nowrap;
+  }
+  input[type="range"] {
+    width: 100%; height: 4px; border-radius: 99px; background: var(--line-hi);
+    -webkit-appearance: none; appearance: none; outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); border: 2px solid #FFF; box-shadow: 0 2px 8px var(--accent-glow);
+  }
+  .cta {
+    width: 100%; height: 44px; border: 1px solid rgba(255,255,255,0.16); border-radius: 10px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.01em; color: #FFF; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(180deg, var(--accent-hi) 0%, var(--accent) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 20px var(--accent-glow);
+    transition: transform .15s ease, filter .15s ease;
+  }
+  .cta:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .cta:active { transform: translateY(0); }
+  .hr { height: 1px; background: var(--line); }
+  .badge {
+    height: 42px; border-radius: 10px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.05em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    color: var(--ok); background: var(--ok-bg); border: 1px solid var(--ok-ln);
+    box-shadow: inset 0 1px 0 var(--spec); transition: all .22s ease;
+  }
+  .badge.fail { color: var(--bad); background: var(--bad-bg); border-color: var(--bad-ln); }
+  .m-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .m-card {
+    padding: 12px 10px; border-radius: 10px; background: var(--glass-2);
+    border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--spec);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center;
+  }
+  .m-k { font-size: 10.5px; font-weight: 500; color: var(--muted); }
+  .m-v { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+  .toast {
+    position: fixed; top: 66px; right: 20px; padding: 10px 14px; border-radius: 10px;
+    font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px;
+    opacity: 0; transform: translateY(-6px); pointer-events: none; transition: all .22s ease; z-index: 40;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="gx" x1="2" y1="2" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#2563EB"/><stop offset="100%" stop-color="#F04E23"/>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="26" height="26" rx="7" fill="url(#gx)" fill-opacity="0.12" stroke="url(#gx)" stroke-width="1.25"/>
+      <path d="M8.5 8.5L19.5 19.5M19.5 8.5L8.5 19.5" stroke="url(#gx)" stroke-width="2.6" stroke-linecap="round"/>
+    </svg>
+    <div class="brand-name">Cal<span>X</span></div>
+    <div class="v-sep"></div>
+    <div class="brand-sub">FEA &amp; LOAD TESTING</div>
+  </div>
+  <div class="bar-r">
+    <div class="chip"><span class="s-dot"></span>CalX Link: <b>Siap</b></div>
+    <button class="tbtn" id="btnImport" type="button">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+      Impor Model
+    </button>
+    <button class="tbtn" id="btnTheme" type="button">
+      <svg id="icoTheme" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <span id="txtTheme">Gelap Presisi</span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="studio fea" id="studio">
+    <svg class="iso-grid" aria-hidden="true">
+      <defs>
+        <pattern id="g30" width="55.42" height="32" patternUnits="userSpaceOnUse">
+          <path d="M0 16L27.71 0L55.42 16L27.71 32Z" fill="none" stroke="var(--grid)" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#g30)"/>
+    </svg>
+
+    <div class="seg lg">
+      <button id="bOrig" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/></svg>
+        Bentuk Asli
+      </button>
+      <button id="bFea" class="on" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+        Peta Warna Tekanan
+      </button>
+    </div>
+
+    <div class="scale lg">
+      <div class="scale-head">MPa</div>
+      <div class="scale-body">
+        <div class="scale-bar"></div>
+        <div class="scale-ticks num">
+          <span>42</span><span>31,5</span><span>21</span><span>10,5</span><span>0 MPa</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" id="stage">
+      <svg id="cadSvg" viewBox="0 0 640 480" fill="none" aria-label="Model 3D Isometrik Kursi Minimalis">
+        <defs>
+          <radialGradient id="shFloor" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#000" stop-opacity="0.34"/><stop offset="100%" stop-color="#000" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="fSeat" cx="48%" cy="46%" r="58%">
+            <stop id="fs0" offset="0%" stop-color="#DC2626"/>
+            <stop id="fs1" offset="36%" stop-color="#F04E23"/>
+            <stop id="fs2" offset="68%" stop-color="#F59E0B"/>
+            <stop offset="92%" stop-color="#10B981"/><stop offset="100%" stop-color="#0EA5E9"/>
+          </radialGradient>
+          <linearGradient id="fLeg" x1="0" y1="0" x2="0" y2="1">
+            <stop id="fl0" offset="0%" stop-color="#F04E23"/>
+            <stop offset="32%" stop-color="#F59E0B"/><stop offset="62%" stop-color="#10B981"/>
+            <stop offset="84%" stop-color="#0EA5E9"/><stop offset="100%" stop-color="#1D4ED8"/>
+          </linearGradient>
+          <linearGradient id="fBack" x1="0" y1="1" x2="0" y2="0">
+            <stop id="fb0" offset="0%" stop-color="#DC2626"/>
+            <stop offset="34%" stop-color="#F59E0B"/><stop offset="68%" stop-color="#10B981"/>
+            <stop offset="100%" stop-color="#1D4ED8"/>
+          </linearGradient>
+        </defs>
+        <g id="gShadow"></g>
+        <g id="gMat"></g>
+        <g id="gFea" class="fea-g"></g>
+        <g id="gMesh" class="fea-g"></g>
+        <g id="gAnnot"></g>
+      </svg>
+      <div class="pin-cap lg num"><i id="pinDot"></i><span id="pinTxt">28,4 MPa · Lendutan 1,8 mm</span></div>
+    </div>
+
+    <div class="triad" aria-hidden="true">
+      <svg width="56" height="52" viewBox="0 0 56 52" fill="none">
+        <path d="M26 30V8M26 30L46 41.5M26 30L6 41.5" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M26 30V8" stroke="#10B981" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M26 30L45 41" stroke="#F04E23" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M26 30L7 41" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round"/>
+        <text x="23" y="6" fill="var(--muted)" font-size="8.5" font-weight="700">Z</text>
+        <text x="47" y="47" fill="var(--muted)" font-size="8.5" font-weight="700">X</text>
+        <text x="0" y="47" fill="var(--muted)" font-size="8.5" font-weight="700">Y</text>
+      </svg>
+    </div>
+    <div class="units lg num">Satuan: mm · N · MPa</div>
+  </section>
+
+  <div class="dock">
+    <aside class="lg">
+      <div class="blk">
+        <div class="lbl"><span>Pilihan Bahan</span></div>
+        <div class="mat-row" id="matRow">
+          <button class="mat-btn on" data-m="jati" type="button">Kayu Jati</button>
+          <button class="mat-btn" data-m="besi" type="button">Besi Kotak</button>
+          <button class="mat-btn" data-m="alum" type="button">Aluminium</button>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="lbl"><span>Beban Uji</span><span class="num" id="lblLoad">100 kg</span></div>
+        <div class="load-ctrl">
+          <div class="num-box">
+            <button class="step" id="sDec" type="button" aria-label="Kurangi beban">−</button>
+            <input class="num" id="inKg" type="number" min="10" max="2000" step="5" value="100" aria-label="Beban dalam kg">
+            <span class="kg-tag">kg</span>
+            <button class="step" id="sInc" type="button" aria-label="Tambah beban">+</button>
+          </div>
+          <div class="n-pill num" id="outN">≈ 981 N</div>
+        </div>
+        <input id="rngKg" type="range" min="20" max="400" step="5" value="100" aria-label="Penggeser beban uji">
+      </div>
+
+      <button class="cta" id="btnRun" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Jalankan Uji Beban
+      </button>
+
+      <div class="hr"></div>
+
+      <div class="blk">
+        <div class="lbl"><span>Ringkasan Hasil</span></div>
+        <div class="badge" id="badge">
+          <svg id="bIco" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          <span id="bTxt">AMAN (LOLOS)</span>
+        </div>
+        <div class="m-grid">
+          <div class="m-card"><div class="m-k">Faktor Keamanan</div><div class="m-v num" id="vSf">2,11×</div></div>
+          <div class="m-card"><div class="m-k">Lendutan Maksimal</div><div class="m-v num" id="vDef">1,8 mm</div></div>
+          <div class="m-card"><div class="m-k">Tegangan Tertinggi</div><div class="m-v num" id="vStr">28,4 MPa</div></div>
+          <div class="m-card"><div class="m-k">Perkiraan Berat</div><div class="m-v num" id="vWgt">6,4 kg</div></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div class="toast lg" id="toast">
+  <span class="s-dot"></span>Model Kursi_Minimalis.skp siap diuji via CalX Link
+</div>
+
+<script>
+(() => {
+  const NS = 'http://www.w3.org/2000/svg', C30 = 0.866025, S30 = 0.5;
+  const $ = id => document.getElementById(id);
+  const fmt = (v, d = 1) => v.toFixed(d).replace('.', ',');
+  const iso = (x, y, z) => [320 + (x - y) * C30, 260 + (x + y) * S30 - z];
+  const pts = arr => arr.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const el = (tag, attrs, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    return parent ? parent.appendChild(n) : n;
+  };
+  const MATS = {
+    jati: { s100: 28.4, d100: 1.8, yld: 60.0, w: 6.4, c: { top: '#C7925E', mid: '#A36F3E', dark: '#7B502A' } },
+    besi: { s100: 23.6, d100: 0.4, yld: 235.0, w: 11.4, c: { top: '#5B6573', mid: '#424B57', dark: '#2D343E' } },
+    alum: { s100: 25.8, d100: 1.0, yld: 145.0, w: 4.8, c: { top: '#D2DAE3', mid: '#ABB6C4', dark: '#8592A3' } }
+  };
+
+  // Bangun geometri 3D isometrik 30 derajat secara matematis
+  function addPrism(t, b, feaFill, isSeat) {
+    const faces = [
+      { p: [t[0], t[1], t[2], t[3]], sh: 'top', ff: feaFill },
+      { p: [t[3], t[2], b[2], b[3]], sh: 'mid', ff: isSeat ? 'url(#fSeat)' : feaFill },
+      { p: [t[1], t[2], b[2], b[1]], sh: 'dark', ff: isSeat ? 'url(#fSeat)' : feaFill }
+    ];
+    faces.forEach((f, idx) => {
+      const polyPts = pts(f.p.map(q => iso(q[0], q[1], q[2])));
+      el('polygon', { points: polyPts, 'data-sh': f.sh, stroke: 'var(--edge)', 'stroke-width': '0.9', 'stroke-linejoin': 'round' }, $('gMat'));
+      el('polygon', { points: polyPts, fill: f.ff, 'fill-opacity': idx === 2 ? '0.84' : '0.95', stroke: 'rgba(255,255,255,0.14)', 'stroke-width': '0.75', 'stroke-linejoin': 'round' }, $('gFea'));
+    });
+  }
+  const rect = (x0, x1, y0, y1, z) => [[x0,y0,z],[x1,y0,z],[x1,y1,z],[x0,y1,z]];
+  const leg = (xt, yt, xb, yb) => addPrism(rect(xt-6.5, xt+6.5, yt-6.5, yt+6.5, 0), rect(xb-4.5, xb+4.5, yb-4.5, yb+4.5, -126), 'url(#fLeg)');
+
+  function buildChair() {
+    // Bayangan lantai lembut + titik kontak 4 kaki
+    const shC = iso(0, 0, -126);
+    el('ellipse', { cx: shC[0], cy: shC[1] + 2, rx: 148, ry: 74, fill: 'url(#shFloor)' }, $('gShadow'));
+    [[-64,-68],[62,-66],[-64,68],[62,66]].forEach(([x,y]) => {
+      const c = iso(x, y, -126);
+      el('ellipse', { cx: c[0], cy: c[1] + 1, rx: 12, ry: 6, fill: '#000', 'fill-opacity': '0.26' }, $('gShadow'));
+    });
+    // Urutan pelukisan dari belakang ke depan
+    leg(-56, -60, -64, -68); // Kaki belakang-kanan
+    addPrism(rect(-62, -55, -62, 62, -76), rect(-62, -55, -62, 62, -85), '#0EA5E9'); // Palang belakang
+    addPrism(rect(-58, 56, -64, -57, -76), rect(-58, 56, -64, -57, -85), '#0EA5E9'); // Palang kanan
+    addPrism(rect(-62, -52, -62, 62, 0), rect(-62, -52, -62, 62, -16), 'url(#fLeg)'); // Apron belakang
+    addPrism(rect(-56, 56, -64, -54, 0), rect(-56, 56, -64, -54, -16), 'url(#fLeg)'); // Apron kanan
+    leg(56, -60, 62, -66); // Kaki depan-kanan
+    leg(-56, 60, -64, 68); // Kaki belakang-kiri
+    addPrism(rect(-58, 56, 57, 64, -76), rect(-58, 56, 57, 64, -85), '#0EA5E9'); // Palang kiri
+    addPrism(rect(-56, 56, 54, 64, 0), rect(-56, 56, 54, 64, -16), 'url(#fLeg)'); // Apron kiri
+    addPrism(rect(52, 62, -60, 60, 0), rect(52, 62, -60, 60, -16), 'url(#fLeg)'); // Apron depan
+    leg(56, 60, 62, 66); // Kaki depan-kiri
+    // Bidang dudukan tebal 3 sisi
+    addPrism(rect(-72, 72, -74, 74, 15), rect(-72, 72, -74, 74, 0), 'url(#fSeat)', true);
+    // Tiang & panel sandaran miring ergonomis
+    addPrism(rect(-84, -73, -64, -52, 138), rect(-66, -54, -64, -52, 15), 'url(#fBack)');
+    addPrism(rect(-84, -73, 52, 64, 138), rect(-66, -54, 52, 64, 15), 'url(#fBack)');
+    addPrism(rect(-86, -75, -68, 68, 136), rect(-76, -65, -68, 68, 76), 'url(#fBack)');
+
+    // Kisi jaring segitiga FEA halus di permukaan dudukan
+    const n = 5, x0 = -72, y0 = -74, dx = 144 / n, dy = 148 / n;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const a = iso(x0+i*dx, y0+j*dy, 15), b = iso(x0+(i+1)*dx, y0+j*dy, 15);
+      const c = iso(x0+(i+1)*dx, y0+(j+1)*dy, 15), d = iso(x0+i*dx, y0+(j+1)*dy, 15);
+      el('polygon', { points: pts([a, b, c]), stroke: 'rgba(255,255,255,0.2)', 'stroke-width': '0.55', fill: 'none' }, $('gMesh'));
+      el('polygon', { points: pts([a, c, d]), stroke: 'rgba(255,255,255,0.2)', 'stroke-width': '0.55', fill: 'none' }, $('gMesh'));
+    }
+    // Panah beban vertikal presisi + titik pin ukur terkunci
+    const sc = iso(6, 4, 15), pPt = iso(-24, -58, 15);
+    el('ellipse', { cx: sc[0], cy: sc[1], rx: 38, ry: 21, fill: 'var(--accent)', 'fill-opacity': '0.12', stroke: 'var(--accent)', 'stroke-width': '1.1', 'stroke-dasharray': '3.5 3.5' }, $('gAnnot'));
+    el('line', { x1: sc[0], y1: sc[1] - 88, x2: sc[0], y2: sc[1] - 12, stroke: 'var(--accent)', 'stroke-width': '2', 'stroke-linecap': 'round' }, $('gAnnot'));
+    el('path', { d: `M${sc[0]-6} ${sc[1]-20}L${sc[0]} ${sc[1]-10}L${sc[0]+6} ${sc[1]-20}`, stroke: 'var(--accent)', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, $('gAnnot'));
+    el('text', { id: 'svgN', x: sc[0] + 10, y: sc[1] - 74, fill: 'var(--text)', 'font-size': '11.5', 'font-weight': '700', class: 'num' }, $('gAnnot')).textContent = '981 N';
+    el('circle', { cx: pPt[0], cy: pPt[1], r: 8.5, fill: 'var(--accent)', 'fill-opacity': '0.24' }, $('gAnnot'));
+    el('circle', { cx: pPt[0], cy: pPt[1], r: 3.6, fill: 'var(--accent)', stroke: '#FFF', 'stroke-width': '1.4' }, $('gAnnot'));
+    el('polyline', { points: `${pPt[0].toFixed(1)},${pPt[1].toFixed(1)} 424,114 440,114`, stroke: 'var(--text)', 'stroke-opacity': '0.55', 'stroke-width': '1.1', fill: 'none' }, $('gAnnot'));
+  }
+
+  let curMat = 'jati', dark = true, toastId;
+  const paintMat = k => document.querySelectorAll('#gMat [data-sh]').forEach(p => p.setAttribute('fill', MATS[k].c[p.dataset.sh]));
+  const setMode = fea => {
+    $('studio').classList.toggle('fea', fea);
+    $('bFea').classList.toggle('on', fea);
+    $('bOrig').classList.toggle('on', !fea);
+  };
+  const syncLoad = val => {
+    const kg = Math.max(10, Math.min(2000, Math.round(Number(val) || 10)));
+    $('inKg').value = kg;
+    $('rngKg').value = Math.min(400, Math.max(20, kg));
+    $('lblLoad').textContent = `${kg} kg`;
+    const n = Math.round(kg * 9.81);
+    $('outN').textContent = `≈ ${n} N`;
+    if ($('svgN')) $('svgN').textContent = `${n} N`;
+    return kg;
+  };
+  function solve(withPulse) {
+    const kg = syncLoad($('inKg').value), m = MATS[curMat], r = kg / 100;
+    const str = m.s100 * r, def = m.d100 * r, sf = m.yld / Math.max(str, 0.01), fail = sf < 1.5;
+    if (withPulse) {
+      $('stage').classList.add('pulse');
+      setTimeout(() => $('stage').classList.remove('pulse'), 190);
+    }
+    $('vSf').textContent = `${fmt(sf, 2)}×`;
+    $('vDef').textContent = `${fmt(def, 1)} mm`;
+    $('vStr').textContent = `${fmt(str, 1)} MPa`;
+    $('vWgt').textContent = `${fmt(m.w, 1)} kg`;
+    $('pinTxt').textContent = `${fmt(str, 1)} MPa · Lendutan ${fmt(def, 1)} mm`;
+    $('badge').classList.toggle('fail', fail);
+    $('bTxt').textContent = fail ? 'RAWAN (GAGAL)' : 'AMAN (LOLOS)';
+    $('bIco').innerHTML = fail
+      ? '<path d="M12 9v4m0 4h.01M10.3 3.8L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z"/>'
+      : '<path d="M20 6L9 17l-5-5"/>';
+    // Intensitas gradasi FEA adaptif terhadap skala 0–42 MPa
+    const t = Math.min(1, str / 42);
+    $('fs0').setAttribute('stop-color', t > 0.65 ? '#DC2626' : t > 0.38 ? '#F04E23' : t > 0.2 ? '#F59E0B' : '#10B981');
+    $('fs1').setAttribute('offset', `${Math.round(20 + t * 34)}%`);
+    $('fs2').setAttribute('offset', `${Math.round(52 + t * 28)}%`);
+    $('fl0').setAttribute('stop-color', t > 0.72 ? '#DC2626' : t > 0.42 ? '#F04E23' : '#F59E0B');
+    $('fb0').setAttribute('stop-color', t > 0.68 ? '#DC2626' : t > 0.4 ? '#F04E23' : '#F59E0B');
+    setMode(true);
+  }
+
+  $('matRow').addEventListener('click', e => {
+    const b = e.target.closest('.mat-btn');
+    if (!b) return;
+    curMat = b.dataset.m;
+    document.querySelectorAll('.mat-btn').forEach(x => x.classList.toggle('on', x === b));
+    paintMat(curMat);
+    solve(false);
+  });
+  $('inKg').addEventListener('input', e => syncLoad(e.target.value));
+  $('rngKg').addEventListener('input', e => { syncLoad(e.target.value); solve(false); });
+  $('sDec').addEventListener('click', () => { syncLoad((+$('inKg').value || 100) - 10); solve(false); });
+  $('sInc').addEventListener('click', () => { syncLoad((+$('inKg').value || 100) + 10); solve(false); });
+  $('btnRun').addEventListener('click', () => solve(true));
+  $('bOrig').addEventListener('click', () => setMode(false));
+  $('bFea').addEventListener('click', () => setMode(true));
+  $('btnTheme').addEventListener('click', () => {
+    dark = !dark;
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    $('txtTheme').textContent = dark ? 'Gelap Presisi' : 'Terang Bersih';
+    $('icoTheme').innerHTML = dark
+      ? '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
+      : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4l1.4-1.4"/>';
+  });
+  $('btnImport').addEventListener('click', () => {
+    $('toast').classList.add('show');
+    clearTimeout(toastId);
+    toastId = setTimeout(() => $('toast').classList.remove('show'), 2500);
+  });
+
+  buildChair();
+  paintMat(curMat);
+  solve(false);
+})();
+</script>
+</body>
+</html>
